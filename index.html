@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>일식조리 합격보조기 v3.1</title>
+    <title>일식조리 합격보조기 v3.6</title>
     <style>
-        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; }
+        body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none; }
         .box { background: white; border-radius: 20px; padding: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
         h2 { color: #2c3e50; text-align: center; border-bottom: 3px solid #e67e22; padding-bottom: 15px; margin-top: 0; }
         .mode-area { display: flex; gap: 8px; margin-bottom: 20px; }
@@ -13,7 +13,7 @@
         .m-btn.on { background: #e67e22; color: white; }
         .display { background: #fffcf0; border: 1px solid #ffd3a3; border-radius: 15px; padding: 20px; min-height: 120px; margin-bottom: 20px; }
         .q-text { font-size: 1.2em; font-weight: bold; color: #d35400; line-height: 1.4; }
-        .ans, .req-box { display: none; background: #eef7ff; padding: 18px; border-radius: 12px; margin-top: 15px; font-size: 0.95em; line-height: 1.8; white-space: pre-wrap; }
+        .ans, .req-box { display: none; background: #eef7ff; padding: 18px; border-radius: 12px; margin-top: 15px; font-size: 0.95em; line-height: 1.8; white-space: pre-wrap; word-break: break-all; }
         .ans { border-left: 6px solid #3498db; }
         .req-box { border-left: 6px solid #27ae60; background: #f2fff5; font-size: 0.85em; }
         .main-btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 1.1em; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; transition: 0.2s; }
@@ -21,75 +21,82 @@
         .go:active { margin-top: 4px; box-shadow: none; }
         .show { background: #34495e; }
         .show-req { background: #27ae60; }
+        .reset-btn { background: none; border: none; color: #95a5a6; text-decoration: underline; font-size: 0.85em; cursor: pointer; display: block; margin: 10px auto; }
         .status-msg { text-align: center; font-size: 0.8em; color: #95a5a6; margin-bottom: 10px; }
         hr { border: 0; border-top: 1px dashed #bdc3c7; margin: 15px 0; }
         b { color: #2980b9; }
-        .ing-list { color: #555; display: block; margin-top: 5px; font-style: normal; }
+        .label-fire { color: #e74c3c; font-weight: bold; }
+        .label-table { color: #27ae60; font-weight: bold; }
     </style>
 </head>
-<body>
+<body oncontextmenu="return false" onselectstart="return false">
 <div class="box">
-    <h2>🍣 일식 실기 마스터 v3.1</h2>
+    <h2>🍣 일식 실기 마스터 v3.6</h2>
     <div class="mode-area">
         <button id="btn1" class="m-btn on" onclick="chgMode('1')">한 과목씩</button>
         <button id="btn2" class="m-btn" onclick="chgMode('2')">시험 조합</button>
     </div>
-    <div id="status" class="status-msg">클라우드 데이터 불러오는 중...</div>
+    <div id="status" class="status-msg">데이터 로딩 중...</div>
     <div class="display">
-        <div id="qText" class="q-text">시트 데이터를 로드하고 있습니다.</div>
+        <div id="qText" class="q-text">데이터를 불러오는 중입니다.</div>
         <div id="aText" class="ans"></div>
         <div id="rText" class="req-box"></div>
     </div>
-    <button id="drawBtn" class="main-btn go" onclick="draw()" disabled>🎲 로딩중...</button>
-    <button class="main-btn show" onclick="view('ans')">💡 소스 및 주의사항 보기</button>
-    <button class="main-btn show-req" onclick="view('req')">📋 요구사항 및 재료 보기</button>
+    <button id="drawBtn" class="main-btn go" onclick="draw()" disabled>🎲 문제 추출</button>
+    <button class="main-btn show" onclick="view('ans')">💡 소스/화구/조리대 보기</button>
+    <button class="main-btn show-req" onclick="view('req')">📋 요구사항/재료 보기</button>
+    <button class="reset-btn" onclick="resetList()">🔄 모든 문제 초기화 (다시 시작)</button>
 </div>
 
 <script>
-    // 입력하신 구글 시트 ID와 연동
     const SHEET_ID = '1TUOwcOj-H29i-D4C0E_WZByOoCJsWgBzAvh8zfQOCK0';
-    const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+    const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
 
     let allData = [];
     let list = [];
     let mode = '1';
 
-    // 1. 데이터 로드
     async function loadData() {
         try {
-            const response = await fetch(URL);
-            const text = await response.text();
-            const json = JSON.parse(text.substr(47).slice(0, -2));
+            const response = await fetch(URL + "&t=" + new Date().getTime());
+            const csvText = await response.text();
+            const rows = parseCSV(csvText);
             
-            allData = json.table.rows.map(row => ({
-                n: row.c[0] ? row.c[0].v : '',
-                t: row.c[1] ? row.c[1].v : '',
-                s: row.c[2] ? row.c[2].v : '',
-                i: row.c[3] ? row.c[3].v : '',
-                req: row.c[4] ? row.c[4].v : '',
-                ing: row.c[5] ? row.c[5].v : ''
-            })).filter(item => item.n !== '과제명(n)' && item.n !== ''); // 헤더 제외
+            allData = rows.slice(1).map(col => ({
+                n: col[0] || '', t: col[1] || '', s: col[2] || '',
+                i: col[3] || '', req: col[4] || '', ing: col[5] || '',
+                burner: col[6] || '정보 없음', table: col[7] || '정보 없음'
+            })).filter(item => item.n !== '' && item.n !== '과제명(n)');
 
             list = [...allData];
             document.getElementById('status').innerText = `✅ 과제 ${allData.length}개 로드 완료`;
-            document.getElementById('qText').innerText = "준비 완료! 버튼을 눌러주세요.";
+            document.getElementById('qText').innerText = "문제를 뽑아주세요!";
             document.getElementById('drawBtn').disabled = false;
-            document.getElementById('drawBtn').innerText = "🎲 다음 문제 추출";
         } catch (e) {
-            document.getElementById('status').innerText = "❌ 로드 실패 (공유 설정을 확인하세요)";
-            console.error(e);
+            document.getElementById('status').innerText = "❌ 로드 실패. 시트 게시를 확인하세요.";
         }
+    }
+
+    function resetList() {
+        list = [...allData];
+        alert("문제 목록이 초기화되었습니다. 다시 전체 과제 중에서 추출됩니다.");
+        document.getElementById('qText').innerText = "새롭게 시작합니다!";
+        document.getElementById('aText').style.display = 'none';
+        document.getElementById('rText').style.display = 'none';
     }
 
     function chgMode(m) {
         mode = m;
         document.getElementById('btn1').className = (m=='1'?'m-btn on':'m-btn');
         document.getElementById('btn2').className = (m=='2'?'m-btn on':'m-btn');
-        list = [...allData];
+        resetList();
     }
 
     function draw() {
-        if (list.length === 0) list = [...allData];
+        if (list.length === 0) {
+            alert("모든 문제를 다 풀었습니다! 목록을 초기화합니다.");
+            list = [...allData];
+        }
         
         document.getElementById('aText').style.display = 'none';
         document.getElementById('rText').style.display = 'none';
@@ -98,24 +105,35 @@
             let idx = Math.floor(Math.random() * list.length);
             let it = list.splice(idx, 1)[0];
             document.getElementById('qText').innerHTML = `${it.n} (${it.t}분)`;
-            document.getElementById('aText').innerHTML = `<b>[핵심 소스]</b><br>${it.s}<hr><b>[주의사항]</b><br>${it.i}`;
-            document.getElementById('rText').innerHTML = `<b>[요구사항]</b><br>${it.req}<hr><b>[지급재료]</b><br><i class="ing-list">${it.ing}</i>`;
+            document.getElementById('aText').innerHTML = `
+                <b>[핵심 소스]</b><br>${it.s}<hr>
+                <span class="label-fire">🔥 화구 사용:</span><br>${it.burner}<br><br>
+                <span class="label-table">🔪 조리대 정리:</span><br>${it.table}<hr>
+                <b>[💡 주의사항]</b><br>${it.i}
+            `;
+            document.getElementById('rText').innerHTML = `<b>[요구사항]</b><br>${it.req}<hr><b>[지급재료]</b><br>${it.ing}`;
         } else {
             if (list.length < 2) list = [...allData];
-            let idx1 = Math.floor(Math.random() * list.length);
-            let it1 = list.splice(idx1, 1)[0];
-            let idx2 = Math.floor(Math.random() * list.length);
-            let it2 = list.splice(idx2, 1)[0];
-            
+            let it1 = list.splice(Math.floor(Math.random()*list.length), 1)[0];
+            let it2 = list.splice(Math.floor(Math.random()*list.length), 1)[0];
             document.getElementById('qText').innerHTML = `1. ${it1.n}<br>2. ${it2.n}`;
-            document.getElementById('aText').innerHTML = `<b><1. ${it1.n}></b><br>${it1.s}<hr><b><2. ${it2.n}></b><br>${it2.s}`;
-            document.getElementById('rText').innerHTML = `<b><1. ${it1.n}></b><br>${it1.req}<br><i>재료: ${it1.ing}</i><hr><b><2. ${it2.n}></b><br>${it2.req}<br><i>재료: ${it2.ing}</i>`;
+            document.getElementById('aText').innerHTML = `<b><1. ${it1.n}></b><br>소스: ${it1.s}<br>화구: ${it1.burner}<hr><b><2. ${it2.n}></b><br>소스: ${it2.s}<br>화구: ${it2.burner}`;
+            document.getElementById('rText').innerHTML = `<b>[요구사항 요약]</b><br>1. ${it1.n}: ${it1.req}<br><br>2. ${it2.n}: ${it2.req}`;
         }
+        document.getElementById('status').innerText = `남은 문제: ${list.length}개`;
     }
 
     function view(type) {
         const target = (type === 'ans' ? document.getElementById('aText') : document.getElementById('rText'));
         target.style.display = (target.style.display == 'none' ? 'block' : 'none');
+    }
+
+    function parseCSV(text) {
+        const p = RegExp(/("(?:"[^"]*")*[^"]*"|[^",]+|(?<=,|^)(?=,|$))/g);
+        return text.split('\n').map(row => {
+            const matches = row.match(p);
+            return matches ? matches.map(m => m.replace(/^"|"$/g, '').replace(/""/g, '"')) : [];
+        });
     }
 
     loadData();
