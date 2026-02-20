@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>일식조리 합격보조기 v3.9</title>
+    <title>일식조리 합격보조기 v4.2</title>
     <style>
         body { font-family: 'Apple SD Gothic Neo', sans-serif; background-color: #f0f2f5; padding: 15px; margin: 0; -webkit-user-select:none; user-select:none; }
         .box { background: white; border-radius: 20px; padding: 25px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
@@ -11,40 +11,48 @@
         .mode-area { display: flex; gap: 8px; margin-bottom: 20px; }
         .m-btn { flex: 1; padding: 12px; border: 2px solid #e67e22; background: white; border-radius: 10px; cursor: pointer; font-weight: bold; color: #e67e22; }
         .m-btn.on { background: #e67e22; color: white; }
-        .display { background: #fffcf0; border: 1px solid #ffd3a3; border-radius: 15px; padding: 20px; min-height: 120px; margin-bottom: 20px; }
-        .q-text { font-size: 1.1em; font-weight: bold; color: #d35400; line-height: 1.6; }
-        .ans, .req-box { display: none; background: #eef7ff; padding: 18px; border-radius: 12px; margin-top: 15px; font-size: 0.95em; line-height: 1.8; white-space: pre-wrap; word-break: break-all; }
+        .display { background: #fffcf0; border: 1px solid #ffd3a3; border-radius: 15px; padding: 15px; min-height: 120px; margin-bottom: 20px; }
+        .q-text { font-size: 1.15em; font-weight: bold; color: #d35400; line-height: 1.6; text-align: left; }
+        
+        /* 텍스트 박스 설정: 왼쪽 끝에 붙도록 padding 조정 */
+        .ans, .req-box { display: none; background: #eef7ff; padding: 15px 10px; border-radius: 12px; margin-top: 15px; font-size: 0.95em; line-height: 1.7; white-space: pre-wrap; word-break: break-all; text-align: left; }
         .ans { border-left: 6px solid #3498db; }
         .req-box { border-left: 6px solid #27ae60; background: #f2fff5; font-size: 0.85em; }
+        
         .main-btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 1.1em; font-weight: bold; cursor: pointer; margin-bottom: 10px; color: white; transition: 0.2s; }
         .go { background: #e67e22; box-shadow: 0 4px #d35400; }
         .go:active { margin-top: 4px; box-shadow: none; }
         .show { background: #34495e; }
         .show-req { background: #27ae60; }
-        .status-msg { text-align: center; font-size: 0.8em; color: #95a5a6; margin-bottom: 10px; }
-        hr { border: 0; border-top: 1px dashed #3498db; margin: 15px 0; }
-        .label-fire { color: #e74c3c; font-weight: bold; font-size: 0.9em; }
-        .label-table { color: #27ae60; font-weight: bold; font-size: 0.9em; }
-        .time-tag { font-size: 0.85em; color: #7f8c8d; font-weight: normal; margin-left: 5px; }
-        .sub-title { font-size: 1.05em; color: #2c3e50; font-weight: bold; display: block; margin-bottom: 5px; border-left: 4px solid #3498db; padding-left: 8px; }
+        .reset-btn { background: none; border: none; color: #95a5a6; text-decoration: underline; font-size: 0.85em; cursor: pointer; display: block; margin: 10px auto; }
+        .status-msg { text-align: center; font-size: 0.85em; color: #7f8c8d; margin-bottom: 10px; font-weight: bold; }
+        hr { border: 0; border-top: 1px dashed #3498db; margin: 12px 0; }
+        
+        /* 항목별 강조 스타일 */
+        .sub-title { font-size: 1.05em; color: #2c3e50; font-weight: bold; display: block; margin-bottom: 5px; border-bottom: 1px solid #3498db; padding-bottom: 2px; }
+        .label-fire { color: #e74c3c; font-weight: bold; }
+        .label-table { color: #27ae60; font-weight: bold; }
+        .label-point { color: #2980b9; font-weight: bold; }
+        .time-tag { font-size: 0.85em; color: #7f8c8d; font-weight: normal; }
     </style>
 </head>
 <body oncontextmenu="return false">
 <div class="box">
-    <h2>🍣 일식 실기 마스터 v3.9</h2>
+    <h2>🍣 일식 실기 마스터 v4.2</h2>
     <div class="mode-area">
         <button id="btn1" class="m-btn on" onclick="chgMode('1')">한 과목씩</button>
         <button id="btn2" class="m-btn" onclick="chgMode('2')">시험 조합</button>
     </div>
-    <div id="status" class="status-msg">데이터 로드 중...</div>
+    <div id="status" class="status-msg">데이터 로딩 중...</div>
     <div class="display">
-        <div id="qText" class="q-text">문제를 추출해 주세요.</div>
+        <div id="qText" class="q-text">추출 버튼을 눌러주세요.</div>
         <div id="aText" class="ans"></div>
         <div id="rText" class="req-box"></div>
     </div>
     <button id="drawBtn" class="main-btn go" onclick="draw()" disabled>🎲 문제 추출</button>
     <button class="main-btn show" onclick="view('ans')">💡 소스/화구/조리대 보기</button>
     <button class="main-btn show-req" onclick="view('req')">📋 요구사항/재료 보기</button>
+    <button class="reset-btn" onclick="fullReset()">🔄 모든 데이터 초기화 (다시 시작)</button>
 </div>
 
 <script>
@@ -54,6 +62,7 @@
     let allData = [];
     let list = [];
     let mode = '1';
+    let comboCount = 0;
 
     async function loadData() {
         try {
@@ -67,11 +76,29 @@
                 burner: col[6] || '-', table: col[7] || '-'
             })).filter(item => item.n !== '' && item.n !== '과제명(n)');
 
-            list = [...allData];
-            document.getElementById('status').innerText = `✅ 과제 ${allData.length}개 로드 완료`;
+            fullReset();
             document.getElementById('drawBtn').disabled = false;
         } catch (e) {
-            document.getElementById('status').innerText = "❌ 연결 오류";
+            document.getElementById('status').innerText = "❌ 데이터 연결 실패";
+        }
+    }
+
+    function fullReset() {
+        list = [...allData];
+        comboCount = 0;
+        updateStatus();
+        document.getElementById('qText').innerText = "추출 버튼을 눌러주세요!";
+        document.getElementById('aText').style.display = 'none';
+        document.getElementById('rText').style.display = 'none';
+    }
+
+    function updateStatus() {
+        if (mode == '1') {
+            document.getElementById('status').innerText = `남은 과제: ${list.length} / 전체: ${allData.length}`;
+        } else {
+            const shorts = allData.filter(x => parseInt(x.t) <= 20).length;
+            const longs = allData.filter(x => parseInt(x.t) > 20).length;
+            document.getElementById('status').innerText = `누적 조합 연습: ${comboCount}회 (총 ${shorts * longs}가지)`;
         }
     }
 
@@ -79,6 +106,7 @@
         mode = m;
         document.getElementById('btn1').className = (m=='1'?'m-btn on':'m-btn');
         document.getElementById('btn2').className = (m=='2'?'m-btn on':'m-btn');
+        fullReset();
     }
 
     function draw() {
@@ -86,50 +114,58 @@
         document.getElementById('rText').style.display = 'none';
 
         if (mode == '1') {
-            if (list.length === 0) list = [...allData];
+            if (list.length === 0) { alert("모든 과제를 연습했습니다! 초기화합니다."); list = [...allData]; }
             let it = list.splice(Math.floor(Math.random() * list.length), 1)[0];
             renderOne(it);
         } else {
             const shorts = allData.filter(x => parseInt(x.t) <= 20);
             const longs = allData.filter(x => parseInt(x.t) > 20);
-            if (shorts.length === 0 || longs.length === 0) {
-                alert("시간 데이터 확인이 필요합니다."); return;
-            }
-            renderTwo(shorts[Math.floor(Math.random()*shorts.length)], longs[Math.floor(Math.random()*longs.length)]);
+            const it1 = shorts[Math.floor(Math.random() * shorts.length)];
+            const it2 = longs[Math.floor(Math.random() * longs.length)];
+            comboCount++;
+            renderTwo(it1, it2);
         }
+        updateStatus();
     }
 
     function renderOne(it) {
         document.getElementById('qText').innerHTML = `${it.n} <span class="time-tag">(${it.t}분)</span>`;
         document.getElementById('aText').innerHTML = `
-            <span class="sub-title">핵심 소스</span>${it.s}<br>
-            <span class="label-fire">🔥 화구:</span> ${it.burner}<br>
-            <span class="label-table">🔪 조리대:</span> ${it.table}<hr>
-            <span class="sub-title">주의사항</span>${it.i}
-        `;
-        document.getElementById('rText').innerHTML = `<span class="sub-title">요구사항</span>${it.req}<hr><span class="sub-title">지급재료</span>${it.ing}`;
+<span class="sub-title">핵심 소스</span>${it.s}
+<hr>
+<span class="label-fire">🔥 화구:</span> ${it.burner}
+<br>
+<span class="label-table">🔪 조리대:</span> ${it.table}
+<hr>
+<span class="label-point">💡 주의사항:</span> ${it.i}`;
+        
+        document.getElementById('rText').innerHTML = `
+<span class="sub-title">요구사항</span>${it.req}
+<hr>
+<span class="sub-title">지급재료</span>${it.ing}`;
     }
 
     function renderTwo(it1, it2) {
-        document.getElementById('qText').innerHTML = `
-            1. ${it1.n} <span class="time-tag">(${it1.t}분)</span><br>
-            2. ${it2.n} <span class="time-tag">(${it2.t}분)</span>
-        `;
+        document.getElementById('qText').innerHTML = `1. ${it1.n} (${it1.t}분)<br>2. ${it2.n} (${it2.t}분)`;
         document.getElementById('aText').innerHTML = `
-            <span class="sub-title">1. ${it1.n} (${it1.t}분)</span>
-            소스: ${it1.s}<br>
-            <span class="label-fire">🔥 화구:</span> ${it1.burner}<br>
-            <span class="label-table">🔪 조리대:</span> ${it1.table}<hr>
-            <span class="sub-title">2. ${it2.n} (${it2.t}분)</span>
-            소스: ${it2.s}<br>
-            <span class="label-fire">🔥 화구:</span> ${it2.burner}<br>
-            <span class="label-table">🔪 조리대:</span> ${it2.table}
-        `;
+<span class="sub-title">1. ${it1.n}</span>
+<b>소스:</b> ${it1.s}<br>
+<span class="label-fire">🔥 화구:</span> ${it1.burner}<br>
+<span class="label-table">🔪 조리대:</span> ${it1.table}<br>
+<b>주의:</b> ${it1.i}
+<hr>
+<span class="sub-title">2. ${it2.n}</span>
+<b>소스:</b> ${it2.s}<br>
+<span class="label-fire">🔥 화구:</span> ${it2.burner}<br>
+<span class="label-table">🔪 조리대:</span> ${it2.table}<br>
+<b>주의:</b> ${it2.i}`;
+
         document.getElementById('rText').innerHTML = `
-            <span class="sub-title">요구사항 요약</span>
-            1. ${it1.n}: ${it1.req}<br><br>
-            2. ${it2.n}: ${it2.req}
-        `;
+<span class="sub-title">1. ${it1.n}</span>
+${it1.req}<br><b>[재료]</b>: ${it1.ing}
+<hr>
+<span class="sub-title">2. ${it2.n}</span>
+${it2.req}<br><b>[재료]</b>: ${it2.ing}`;
     }
 
     function view(type) {
@@ -149,4 +185,3 @@
 </script>
 </body>
 </html>
-
